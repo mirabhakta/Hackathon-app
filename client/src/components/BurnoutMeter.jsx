@@ -1,43 +1,50 @@
-import { useContext } from "react";
-import { motion } from "framer-motion";
-import { ThemeContext } from "../context/ThemeContext.jsx";
+export const WORKLOAD_LEVELS = [
+  { max: 0.33, label: "Light week",    color: "bg-green-400",  text: "text-green-700",  ring: "ring-green-300"  },
+  { max: 0.66, label: "Moderate load", color: "bg-yellow-400", text: "text-yellow-700", ring: "ring-yellow-300" },
+  { max: 1.00, label: "Heavy week",    color: "bg-orange-400", text: "text-orange-700", ring: "ring-orange-300" },
+];
 
-function getTier(burnRate) {
-  if (burnRate < 0.3) return "good";
-  if (burnRate < 0.6) return "warn";
-  return "high";
+export function getWorkloadLevel(score) {
+  return (
+    WORKLOAD_LEVELS.find((l) => score <= l.max) ??
+    WORKLOAD_LEVELS[WORKLOAD_LEVELS.length - 1]
+  );
 }
 
-export default function BurnoutMeter({ burnRate }) {
-  const { colors } = useContext(ThemeContext);
-  const percent = Math.round(burnRate * 100);
-  const tier = getTier(burnRate);
-  const fillColor = tier === "good" ? colors.burnGood : tier === "warn" ? colors.burnWarn : colors.burnHigh;
-  const pillConfig =
-    tier === "good"
-      ? { background: colors.pillGoodBg, color: colors.pillGoodText, borderColor: colors.pillGoodBorder, label: "Doing great" }
-      : tier === "warn"
-        ? { background: colors.pillWarnBg, color: colors.pillWarnText, borderColor: colors.pillWarnBorder, label: "Keep an eye out" }
-        : { background: colors.pillDangerBg, color: colors.pillDangerText, borderColor: colors.pillDangerBorder, label: "Time for a break" };
-  const { label, ...pillStyles } = pillConfig;
+/**
+ * Props:
+ *   score  — number 0–1  (formerly "burnoutScore")
+ *   label? — override the level label
+ */
+export default function WorkloadBalanceMeter({ score = 0, label }) {
+  const level = getWorkloadLevel(score);
+  const pct   = Math.round(score * 100);
+  const displayLabel = label ?? level.label;
 
   return (
-    <div className="rounded-[28px] p-5 shadow-lg" style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Burnout Meter</p>
-          <h3 className="font-display text-2xl" style={{ color: colors.secondaryText }}>{label}</h3>
-        </div>
-        <div className="rounded-full border px-4 py-2 text-sm font-bold" style={pillStyles}>{percent}%</div>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-600">Work-pattern load</span>
+        <span className={`text-sm font-semibold ${level.text}`}>{displayLabel}</span>
       </div>
-      <div className="relative h-5 overflow-hidden rounded-full" style={{ background: colors.secondary }}>
-        <motion.div
-          animate={{ width: `${percent}%` }}
-          transition={{ type: "spring", stiffness: 90, damping: 18 }}
-          className="absolute inset-y-0 left-0 rounded-full"
-          style={{ background: fillColor }}
+
+      {/* Bar */}
+      <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${level.color}`}
+          style={{ width: `${pct}%` }}
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Work-pattern load: ${pct}%`}
         />
       </div>
+
+      <p className="text-xs text-gray-400">
+        This is a rough, non-clinical indicator of your recent work patterns —
+        not a medical or mental-health assessment.
+      </p>
     </div>
   );
 }
